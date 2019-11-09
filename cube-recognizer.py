@@ -4,22 +4,34 @@ import math
 import time
 
 '''
-This program is for comparing color, especially RGB, HSV, and YCbCr.
-It will read example cube photo, and select some pixels' color.
-Finally, Comparing these colors to sort specific type of color.
+This program is rubix cube color recognizer using OpenCV
+2019. 11. 08
 '''
+# Sets of camera
 cameras = []
+
+# Sets of camera view
 screens = []
 
+# Width, Height of camera
 w, h = 320, 240
 
+# Starting points of camera view windows
 RENDER_BASE_X = -1920
 RENDER_BASE_Y = 0
+
+# Window Titlebar
+# Change it if you want
 RENDER_TITLEBAR_HEIGHT = 33
 
+# Get average of color pixels in offset * offset square pixels
 AVERAGE_COLOR_OFFSET = 3
+
+# Distance offset of grouping same colors
 COLOR_DISTANCE_OFFSET = 100
 
+# Cube Object
+# It defines 6 cube faces, including their position in camera, etc
 CUBE = [
     {
         'face': 'B',
@@ -136,28 +148,37 @@ def saveColor(cubeObj, a, b, c):
             obj['color'][i] = (avgA, avgB, avgC)
             if i == 4: obj['center'] = (avgA, avgB, avgC)
 
+# Calculate distance in color
 def calDist(fromX, fromY, fromZ, toX, toY, toZ):
     return math.sqrt(
         abs(fromX * fromX - toX * toX)
         + abs(fromY * fromY - toY * toY)
         + abs(fromZ * fromZ - toZ * toZ))
 
-def sortColor():
+# Grouping similar colors detected in camera
+def groupColor():
     for fromObj in CUBE:
         for toObj in CUBE:
+            # Get center pixel color of cube face
             i = 0; fromX, fromY, fromZ = fromObj['center']
             for toX, toY, toZ in toObj['color']:
-                distance = calDist(0, fromY, fromZ, 0, toY, toZ)
-                #print(i, distance)
+                distance = calDist(fromX, fromY, fromZ, toX, toY, toZ)
+
+                # If color distance is smaller than distance offset,
+                # put them in same color group
                 if distance < COLOR_DISTANCE_OFFSET:
                     toObj['faceString'][i] = fromObj['face']
 
                 i += 1
 
+# Clear cube faceString for renew calculation
 def clearCube():
     for obj in CUBE:
         obj['faceString'] = [str(i) for i in range(0, 9)]
 
+'''
+This is main code
+'''
 for i in range(0, 2):
     cameras.append(cv2.VideoCapture(i))
 
@@ -171,18 +192,22 @@ while True:
     for i, cam in enumerate(cameras):
         ret, frame = cam.read()
 
+        # Calculate YCrCb color range
         YCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCR_CB)
-        y, cr, cb = cv2.split(YCrCb)
-        ny = cv2.normalize(y, None, 0, 255, cv2.NORM_MINMAX)
-        ncr = cv2.normalize(cr, None, 0, 255, cv2.NORM_MINMAX)
-        ncb = cv2.normalize(cb, None, 0, 255, cv2.NORM_MINMAX)
+        Y, Cr, Cb = cv2.split(YCrCb)
+        nY = cv2.normalize(Y, None, 0, 255, cv2.NORM_MINMAX)
+        nCr = cv2.normalize(Cr, None, 0, 255, cv2.NORM_MINMAX)
+        nCb = cv2.normalize(Cb, None, 0, 255, cv2.NORM_MINMAX)
 
+        # Calculate HSV color range
         HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
         H, S, V = cv2.split(HSV)
         nH = cv2.normalize(H, None, 0, 255, cv2.NORM_MINMAX)
         nS = cv2.normalize(S, None, 0, 255, cv2.NORM_MINMAX)
         nV = cv2.normalize(V, None, 0, 255, cv2.NORM_MINMAX)
 
+        # Camera 1 = B, R, D
+        # Camera 2 = U, L, F
         cubeObj = []
         if i == 0:
             cubeObj.append(CUBE[0])
@@ -193,43 +218,48 @@ while True:
             cubeObj.append(CUBE[4])
             cubeObj.append(CUBE[5])
 
+        # Write face info, and x, y value in camera view
         drawPos(cubeObj, frame)
-        saveColor(cubeObj, nH, nS, nV)
 
+        # Save center color, and 9 face colors
+        saveColor(cubeObj, nY, nCr, nCb)
+
+        # Define various camera view
+        # Edit it if you want
         screens = [
             [
                 'Camera{} - Y'.format(i),
-                y,
+                Y,
                 RENDER_BASE_X + 0 * w,
                 RENDER_BASE_Y + 2 * i * (h + RENDER_TITLEBAR_HEIGHT)
             ],
             [
                 'Camera{} - nY'.format(i), 
-                ny, 
+                nY, 
                 RENDER_BASE_X + 0 * w, 
                 RENDER_BASE_Y + (2 * i + 1) * (h + RENDER_TITLEBAR_HEIGHT)
             ],
             [
                 'Camera{} - Cr'.format(i), 
-                cr, 
+                Cr, 
                 RENDER_BASE_X + 1 * w, 
                 RENDER_BASE_Y + 2 * i * (h + RENDER_TITLEBAR_HEIGHT)
             ],
             [
                 'Camera{} - nCr'.format(i), 
-                ncr, 
+                nCr, 
                 RENDER_BASE_X + 1 * w, 
                 RENDER_BASE_Y + (2 * i + 1) * (h + RENDER_TITLEBAR_HEIGHT)
             ],
             [
                 'Camera{} - Cb'.format(i), 
-                cb, 
+                Cb, 
                 RENDER_BASE_X + 2 * w, 
                 RENDER_BASE_Y + 2 * i * (h + RENDER_TITLEBAR_HEIGHT)
             ],
             [
                 'Camera{} - nCb'.format(i), 
-                ncb, 
+                nCb, 
                 RENDER_BASE_X + 2 * w, 
                 RENDER_BASE_Y + (2 * i + 1) * (h + RENDER_TITLEBAR_HEIGHT)
             ],
@@ -241,22 +271,26 @@ while True:
             ],
         ]
 
+        # Rendering windows for each pre-defined camera view
         for screen in screens:
             renderWindow(screen[0], screen[1], screen[2], screen[3])
 
+        # If you want to save some images, use this function
         #cv.imwrite('test{}-gray.png'.format(i), gray)
         #cv.imwrite('test{}-ycrcb.png'.format(i), YCrCb)
 
-        # 참고: 0x1B (ESC)
+        # Note. 0x1B (ESC)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             cam.release()
     
-    sortColor()
+    # Grouping same color
+    groupColor()
 
+    # Print grouping color of each cube face
     for obj in CUBE:
         print(obj['face'] + '-' + ''.join(obj['faceString']))
 
+    # Delay for slow calculation rate
     time.sleep(1)
-
 
 cv2.destroyAllWindows()
