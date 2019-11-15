@@ -1,105 +1,45 @@
-import cv2
+import cv2, math, time
 import numpy as np
-import math
-import time
+import json
 
 '''
 This program is rubix cube color recognizer using OpenCV
 2019. 11. 08
 '''
-# Sets of camera
-cameras = []
 
-# Sets of camera view
-screens = []
+cameras, screens = [], []
 
-# Width, Height of camera
-w, h = 320, 240
-
-# Starting points of camera view windows
-RENDER_BASE_X = -1920
-RENDER_BASE_Y = 0
-
-# Window Titlebar
-# Change it if you want
+CONFIG_FILE = 'cube.json'
+CAMERA_QUANTITY = 2
+CAMERA_WIDTH, CAMERA_HEIGHT = 320, 240
+RENDER_BASE_X, RENDER_BASE_Y = 0, 0
 RENDER_TITLEBAR_HEIGHT = 33
+COLOR_AVERAGE_OFFSET, COLOR_DISTANCE_OFFSET = 3, 100
+CUBE = None
 
-# Get average of color pixels in offset * offset square pixels
-AVERAGE_COLOR_OFFSET = 3
+# Read settings from json
+def readConfig(file):
+    with open(file, 'r') as f:
+        config = json.load(f)
+    
+    global CAMERA_QUANTITY
+    CAMERA_QUANTITY = config['CAMERA_QUANTITY']
 
-# Distance offset of grouping same colors
-COLOR_DISTANCE_OFFSET = 100
+    global CAMERA_WIDTH, CAMERA_HEIGHT
+    CAMERA_WIDTH, CAMERA_HEIGHT = config['CAMERA_WIDTH'], config['CAMERA_HEIGHT']
 
-# Cube Object
-# It defines 6 cube faces, including their position in camera, etc
-CUBE = [
-    {
-        'face': 'B',
-        'pixel': [
-            [116, 32], [155, 39], [186, 44],
-            [126, 53], [166, 59], [201, 64],
-            [139, 82], [180, 85], [218, 89]
-        ],
-        'center': None,
-        'faceString': [str(i) for i in range(0, 9)],
-        'color': [None] * 9
-    },
-    {
-        'face': 'R',
-        'pixel': [
-            [73, 109], [81, 81], [91, 47],
-            [79, 130], [88, 102], [98, 69],
-            [88, 162], [97, 133], [110, 99],
-        ],
-        'center': None,
-        'faceString': [str(i) for i in range(0, 9)],
-        'color': [None] * 9
-    },
-    {
-        'face': 'D',
-        'pixel': [
-            [186, 179], [153, 179], [112, 180],
-            [200, 153], [165, 151], [123, 150],
-            [218, 121], [180, 118], [137, 113],
-        ],
-        'center': None,
-        'faceString': [str(i) for i in range(0, 9)],
-        'color': [None] * 9
-    },
-    {
-        'face': 'U',
-        'pixel': [
-            [115, 34], [153, 41], [184, 48],
-            [128, 56], [167, 61], [200, 67],
-            [142, 80], [182, 85], [219, 90]
-        ],
-        'center': None,
-        'faceString': [str(i) for i in range(0, 9)],
-        'color': [None] * 9
-    },
-    {
-        'face': 'L',
-        'pixel': [
-            [89, 47], [99, 70], [111, 99],
-            [77, 85], [87, 108], [97, 135],
-            [67, 115], [75, 139], [85, 169]
-        ],
-        'center': None,
-        'faceString': [str(i) for i in range(0, 9)],
-        'color': [None] * 9
-    },
-    {
-        'face': 'F',
-        'pixel': [
-            [142, 116], [183, 119], [219, 122],
-            [126, 153], [167, 154], [202, 155],
-            [112, 186], [153, 184], [188, 183]
-        ],
-        'center': None,
-        'faceString': [str(i) for i in range(0, 9)],
-        'color': [None] * 9
-    }
-]
+    global RENDER_BASE_X, RENDER_BASE_Y
+    RENDER_BASE_X, RENDER_BASE_Y = config['RENDER_BASE_X'], config['RENDER_BASE_Y']
+
+    global RENDER_TITLEBAR_HEIGHT
+    RENDER_TITLEBAR_HEIGHT = config['RENDER_TITLEBAR_HEIGHT']
+
+    global COLOR_AVERAGE_OFFSET, COLOR_DISTANCE_OFFSET
+    COLOR_AVERAGE_OFFSET, COLOR_DISTANCE_OFFSET = \
+        config['COLOR_AVERAGE_OFFSET'], config['COLOR_DISTANCE_OFFSET']
+
+    global CUBE
+    CUBE = config['CUBE']
 
 # Render camera screen to window
 def renderWindow(title, screen, x, y):
@@ -121,9 +61,9 @@ def calAvgColor(a, b, c, x, y, offset):
     fromY = math.ceil(y - offset / 2); toY = math.ceil(y + offset / 2)
 
     if fromX < 0: fromX = 0
-    if toX >= w: toX = w - 1
+    if toX >= CAMERA_WIDTH: toX = CAMERA_WIDTH - 1
     if fromY < 0: fromY = 0
-    if toY >= h: toY = h - 1
+    if toY >= CAMERA_HEIGHT: toY = CAMERA_HEIGHT - 1
 
     avgA = 0; avgB = 0; avgC = 0
     for aY in range(fromY, toY):
@@ -144,7 +84,7 @@ def saveColor(cubeObj, a, b, c):
     for obj in cubeObj:
         for i, pixel in enumerate(obj['pixel']):
             x = pixel[0]; y = pixel[1]
-            avgA, avgB, avgC = calAvgColor(a, b, c, x, y, AVERAGE_COLOR_OFFSET)
+            avgA, avgB, avgC = calAvgColor(a, b, c, x, y, COLOR_AVERAGE_OFFSET)
             obj['color'][i] = (avgA, avgB, avgC)
             if i == 4: obj['center'] = (avgA, avgB, avgC)
 
@@ -157,6 +97,7 @@ def calDist(fromX, fromY, fromZ, toX, toY, toZ):
 
 # Grouping similar colors detected in camera
 def groupColor():
+    global CUBE
     for fromObj in CUBE:
         for toObj in CUBE:
             # Get center pixel color of cube face
@@ -173,124 +114,132 @@ def groupColor():
 
 # Clear cube faceString for renew calculation
 def clearCube():
+    global CUBE
     for obj in CUBE:
         obj['faceString'] = [str(i) for i in range(0, 9)]
 
 '''
-This is main code
+This is main code for executing this library directly
 '''
-for i in range(0, 2):
-    cameras.append(cv2.VideoCapture(i))
+def main():
+    readConfig(CONFIG_FILE)
 
-for cam in cameras:
-    cam.set(3, w)  # cv2.CAP_PROP_FRAME_HEIGHT
-    cam.set(4, h)  # cv2.CAP_PROP_FRAME_WIDTH
+    for i in range(0, CAMERA_QUANTITY + 1):
+        cameras.append(cv2.VideoCapture(i))
 
-while True:
-    #clearCube()
+    for cam in cameras:
+        cam.set(3, CAMERA_WIDTH)  # cv2.CAP_PROP_FRAME_HEIGHT
+        cam.set(4, CAMERA_HEIGHT)  # cv2.CAP_PROP_FRAME_WIDTH
 
-    for i, cam in enumerate(cameras):
-        ret, frame = cam.read()
+    while True:
+        #clearCube()
 
-        # Calculate YCrCb color range
-        YCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCR_CB)
-        Y, Cr, Cb = cv2.split(YCrCb)
-        nY = cv2.normalize(Y, None, 0, 255, cv2.NORM_MINMAX)
-        nCr = cv2.normalize(Cr, None, 0, 255, cv2.NORM_MINMAX)
-        nCb = cv2.normalize(Cb, None, 0, 255, cv2.NORM_MINMAX)
+        for i, cam in enumerate(cameras):
+            ret, frame = cam.read()
 
-        # Calculate HSV color range
-        HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        H, S, V = cv2.split(HSV)
-        nH = cv2.normalize(H, None, 0, 255, cv2.NORM_MINMAX)
-        nS = cv2.normalize(S, None, 0, 255, cv2.NORM_MINMAX)
-        nV = cv2.normalize(V, None, 0, 255, cv2.NORM_MINMAX)
+            # Calculate YCrCb color range
+            YCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCR_CB)
+            Y, Cr, Cb = cv2.split(YCrCb)
+            nY = cv2.normalize(Y, None, 0, 255, cv2.NORM_MINMAX)
+            nCr = cv2.normalize(Cr, None, 0, 255, cv2.NORM_MINMAX)
+            nCb = cv2.normalize(Cb, None, 0, 255, cv2.NORM_MINMAX)
 
-        # Camera 1 = B, R, D
-        # Camera 2 = U, L, F
-        cubeObj = []
-        if i == 0:
-            cubeObj.append(CUBE[0])
-            cubeObj.append(CUBE[1])
-            cubeObj.append(CUBE[2])
-        else:
-            cubeObj.append(CUBE[3])
-            cubeObj.append(CUBE[4])
-            cubeObj.append(CUBE[5])
+            # Calculate HSV color range
+            HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            H, S, V = cv2.split(HSV)
+            nH = cv2.normalize(H, None, 0, 255, cv2.NORM_MINMAX)
+            nS = cv2.normalize(S, None, 0, 255, cv2.NORM_MINMAX)
+            nV = cv2.normalize(V, None, 0, 255, cv2.NORM_MINMAX)
 
-        # Write face info, and x, y value in camera view
-        drawPos(cubeObj, frame)
+            # Camera 1 = B, R, D
+            # Camera 2 = U, L, F
+            cubeObj = []
+            if i == 0:
+                cubeObj.append(CUBE[0])
+                cubeObj.append(CUBE[1])
+                cubeObj.append(CUBE[2])
+            else:
+                cubeObj.append(CUBE[3])
+                cubeObj.append(CUBE[4])
+                cubeObj.append(CUBE[5])
 
-        # Save center color, and 9 face colors
-        saveColor(cubeObj, nY, nCr, nCb)
+            # Write face info, and x, y value in camera view
+            drawPos(cubeObj, frame)
 
-        # Define various camera view
-        # Edit it if you want
-        screens = [
-            [
-                'Camera{} - Y'.format(i),
-                Y,
-                RENDER_BASE_X + 0 * w,
-                RENDER_BASE_Y + 2 * i * (h + RENDER_TITLEBAR_HEIGHT)
-            ],
-            [
-                'Camera{} - nY'.format(i), 
-                nY, 
-                RENDER_BASE_X + 0 * w, 
-                RENDER_BASE_Y + (2 * i + 1) * (h + RENDER_TITLEBAR_HEIGHT)
-            ],
-            [
-                'Camera{} - Cr'.format(i), 
-                Cr, 
-                RENDER_BASE_X + 1 * w, 
-                RENDER_BASE_Y + 2 * i * (h + RENDER_TITLEBAR_HEIGHT)
-            ],
-            [
-                'Camera{} - nCr'.format(i), 
-                nCr, 
-                RENDER_BASE_X + 1 * w, 
-                RENDER_BASE_Y + (2 * i + 1) * (h + RENDER_TITLEBAR_HEIGHT)
-            ],
-            [
-                'Camera{} - Cb'.format(i), 
-                Cb, 
-                RENDER_BASE_X + 2 * w, 
-                RENDER_BASE_Y + 2 * i * (h + RENDER_TITLEBAR_HEIGHT)
-            ],
-            [
-                'Camera{} - nCb'.format(i), 
-                nCb, 
-                RENDER_BASE_X + 2 * w, 
-                RENDER_BASE_Y + (2 * i + 1) * (h + RENDER_TITLEBAR_HEIGHT)
-            ],
-            [
-                'Camera{} - Pixel'.format(i), 
-                frame, 
-                RENDER_BASE_X + 3 * w, 
-                RENDER_BASE_Y + 2 * i * (h + RENDER_TITLEBAR_HEIGHT)
-            ],
-        ]
+            # Save center color, and 9 face colors
+            saveColor(cubeObj, nY, nCr, nCb)
 
-        # Rendering windows for each pre-defined camera view
-        for screen in screens:
-            renderWindow(screen[0], screen[1], screen[2], screen[3])
+            # Define various camera view
+            # Edit it if you want
+            screens = [
+                [
+                    'Camera{} - Y'.format(i),
+                    Y,
+                    RENDER_BASE_X + 0 * CAMERA_WIDTH,
+                    RENDER_BASE_Y + 2 * i * (CAMERA_HEIGHT + RENDER_TITLEBAR_HEIGHT)
+                ],
+                [
+                    'Camera{} - nY'.format(i), 
+                    nY, 
+                    RENDER_BASE_X + 0 * CAMERA_WIDTH, 
+                    RENDER_BASE_Y + (2 * i + 1) * (CAMERA_HEIGHT + RENDER_TITLEBAR_HEIGHT)
+                ],
+                [
+                    'Camera{} - Cr'.format(i), 
+                    Cr, 
+                    RENDER_BASE_X + 1 * CAMERA_WIDTH, 
+                    RENDER_BASE_Y + 2 * i * (CAMERA_HEIGHT + RENDER_TITLEBAR_HEIGHT)
+                ],
+                [
+                    'Camera{} - nCr'.format(i), 
+                    nCr, 
+                    RENDER_BASE_X + 1 * CAMERA_WIDTH, 
+                    RENDER_BASE_Y + (2 * i + 1) * (CAMERA_HEIGHT + RENDER_TITLEBAR_HEIGHT)
+                ],
+                [
+                    'Camera{} - Cb'.format(i), 
+                    Cb, 
+                    RENDER_BASE_X + 2 * CAMERA_WIDTH, 
+                    RENDER_BASE_Y + 2 * i * (CAMERA_HEIGHT + RENDER_TITLEBAR_HEIGHT)
+                ],
+                [
+                    'Camera{} - nCb'.format(i), 
+                    nCb, 
+                    RENDER_BASE_X + 2 * CAMERA_WIDTH, 
+                    RENDER_BASE_Y + (2 * i + 1) * (CAMERA_HEIGHT + RENDER_TITLEBAR_HEIGHT)
+                ],
+                [
+                    'Camera{} - Pixel'.format(i), 
+                    frame, 
+                    RENDER_BASE_X + 3 * CAMERA_WIDTH, 
+                    RENDER_BASE_Y + 2 * i * (CAMERA_HEIGHT + RENDER_TITLEBAR_HEIGHT)
+                ],
+            ]
 
-        # If you want to save some images, use this function
-        #cv.imwrite('test{}-gray.png'.format(i), gray)
-        #cv.imwrite('test{}-ycrcb.png'.format(i), YCrCb)
+            # Rendering windows for each pre-defined camera view
+            for screen in screens:
+                renderWindow(screen[0], screen[1], screen[2], screen[3])
 
-        # Note. 0x1B (ESC)
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            cam.release()
-    
-    # Grouping same color
-    groupColor()
+            # If you want to save some images, use this function
+            #cv.imwrite('test{}-gray.png'.format(i), gray)
+            #cv.imwrite('test{}-ycrcb.png'.format(i), YCrCb)
 
-    # Print grouping color of each cube face
-    for obj in CUBE:
-        print(obj['face'] + '-' + ''.join(obj['faceString']))
+            # Note. 0x1B (ESC)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                cam.release()
+        
+        # Grouping same color
+        groupColor()
 
-    # Delay for slow calculation rate
-    time.sleep(1)
+        # Print grouping color of each cube face
+        for obj in CUBE:
+            print(obj['face'] + '-' + ''.join(obj['faceString']))
 
-cv2.destroyAllWindows()
+        # Delay for slow calculation rate
+        time.sleep(1)
+
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()
