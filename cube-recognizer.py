@@ -7,14 +7,39 @@ This program is rubix cube color recognizer using OpenCV
 2019. 11. 08
 '''
 
+# Sets of camera, Sets of camera view
 cameras, screens = [], []
 
+# Read from config, else use default value
 CONFIG_FILE = 'cube.json'
+
+# Quantity of camera
+# Don't recommend change this value
 CAMERA_QUANTITY = 2
+
+# Total camera delay
+# If you reads 3 times, 1s of delay are given to each cameras
+CAMERA_DELAY = 2
+
+# Number of camera shots
+CAMERA_TIMES = 3
+
+# Width, Height of camera
 CAMERA_WIDTH, CAMERA_HEIGHT = 320, 240
+
+# Starting points of camera view windows
 RENDER_BASE_X, RENDER_BASE_Y = 0, 0
+
+# Window Titlebar
+# Change it depends on your environment
 RENDER_TITLEBAR_HEIGHT = 33
+
+# Get average of color pixels in offset * offset square pixels, 
+# Distance offset of grouping same colors
 COLOR_AVERAGE_OFFSET, COLOR_DISTANCE_OFFSET = 3, 100
+
+# Cube Object
+# It defines 6 cube faces, including their position in camera, etc
 CUBE = None
 
 # Read settings from json
@@ -22,8 +47,9 @@ def readConfig(file):
     with open(file, 'r') as f:
         config = json.load(f)
     
-    global CAMERA_QUANTITY
-    CAMERA_QUANTITY = config['CAMERA_QUANTITY']
+    global CAMERA_QUANTITY, CAMERA_DELAY, CAMERA_TIMES
+    CAMERA_QUANTITY, CAMERA_DELAY, CAMERA_TIIMES = \
+        config['CAMERA_QUANTITY'], config['CAMERA_DELAY'], config['CAMERA_TIIMES']
 
     global CAMERA_WIDTH, CAMERA_HEIGHT
     CAMERA_WIDTH, CAMERA_HEIGHT = config['CAMERA_WIDTH'], config['CAMERA_HEIGHT']
@@ -118,6 +144,76 @@ def clearCube():
     for obj in CUBE:
         obj['faceString'] = [str(i) for i in range(0, 9)]
 
+def validate():
+    # TODO: Validate if there is 9 tiles of each 6 colors,
+    #       if not, recognize cube one more again or modify(not recommend) it.
+    #       To modify cube info, you can remove farthest distance color.
+    #       You can adjust led lights to clear camera's sight.
+    global CUBE
+
+def recognize():
+    readConfig(CONFIG_FILE)
+
+    for i in range(0, CAMERA_QUANTITY + 1):
+        cameras.append(cv2.VideoCapture(i))
+
+    for cam in cameras:
+        cam.set(3, CAMERA_WIDTH)  # cv2.CAP_PROP_FRAME_HEIGHT
+        cam.set(4, CAMERA_HEIGHT)  # cv2.CAP_PROP_FRAME_WIDTH
+    
+    for i in range(0, CAMERA_TIMES + 1):
+        for cam in cameras:
+            ret, frame = cam.read()
+
+            # Calculate YCrCb color range
+            YCrCb = cv2.cvtColor(frame, cv2.COLOR_BGR2YCR_CB)
+            Y, Cr, Cb = cv2.split(YCrCb)
+            nY = cv2.normalize(Y, None, 0, 255, cv2.NORM_MINMAX)
+            nCr = cv2.normalize(Cr, None, 0, 255, cv2.NORM_MINMAX)
+            nCb = cv2.normalize(Cb, None, 0, 255, cv2.NORM_MINMAX)
+
+            # Calculate HSV color range
+            HSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            H, S, V = cv2.split(HSV)
+            nH = cv2.normalize(H, None, 0, 255, cv2.NORM_MINMAX)
+            nS = cv2.normalize(S, None, 0, 255, cv2.NORM_MINMAX)
+            nV = cv2.normalize(V, None, 0, 255, cv2.NORM_MINMAX)
+
+            # Camera 1 = B, R, D
+            # Camera 2 = U, L, F
+            cubeObj = []
+            if i == 0:
+                cubeObj.append(CUBE[0])
+                cubeObj.append(CUBE[1])
+                cubeObj.append(CUBE[2])
+            else:
+                cubeObj.append(CUBE[3])
+                cubeObj.append(CUBE[4])
+                cubeObj.append(CUBE[5])
+            # ... Add something if you have more cameras
+
+            # Write face info, and x, y value in camera view
+            drawPos(cubeObj, frame)
+
+            # Save center color, and 9 face colors
+            saveColor(cubeObj, nY, nCr, nCb)
+
+            # Grouping same color
+            groupColor()
+        
+        # Delay time for slow speed CPU
+        time.sleep(CAMERA_DELAY / CAMERA_TIMES / len(cameras))
+
+        # Print grouping color of each cube face
+        for obj in CUBE:
+            print(obj['face'] + '-' + ''.join(obj['faceString']))
+
+    # TODO: Validate each color, act something if something is wrong
+
+    ###
+    
+    return CUBE
+
 '''
 This is main code for executing this library directly
 '''
@@ -162,6 +258,7 @@ def main():
                 cubeObj.append(CUBE[3])
                 cubeObj.append(CUBE[4])
                 cubeObj.append(CUBE[5])
+            # ... Add something if you have more cameras
 
             # Write face info, and x, y value in camera view
             drawPos(cubeObj, frame)
@@ -243,3 +340,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+else:
+    recognize()
