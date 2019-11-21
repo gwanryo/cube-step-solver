@@ -15,7 +15,7 @@ CONFIG_FILE = 'cube.json'
 
 # Quantity of camera
 # Don't recommend change this value
-CAMERA_QUANTITY = 2
+CAMERA_OFFSET = 0; CAMERA_QUANTITY = 2
 
 # Total camera delay
 # If you reads 3 times, 1s of delay are given to each cameras
@@ -47,9 +47,11 @@ def readConfig(file):
     with open(file, 'r') as f:
         config = json.load(f)
     
-    global CAMERA_QUANTITY, CAMERA_DELAY, CAMERA_TIMES
-    CAMERA_QUANTITY, CAMERA_DELAY, CAMERA_TIIMES = \
-        config['CAMERA_QUANTITY'], config['CAMERA_DELAY'], config['CAMERA_TIIMES']
+    global CAMERA_OFFSET, CAMERA_QUANTITY
+    CAMERA_OFFSET, CAMERA_QUANTITY = config['CAMERA_OFFSET'], config['CAMERA_QUANTITY']
+    
+    global CAMERA_DELAY, CAMERA_TIMES
+    CAMERA_DELAY, CAMERA_TIMES = config['CAMERA_DELAY'], config['CAMERA_TIMES']
 
     global CAMERA_WIDTH, CAMERA_HEIGHT
     CAMERA_WIDTH, CAMERA_HEIGHT = config['CAMERA_WIDTH'], config['CAMERA_HEIGHT']
@@ -154,7 +156,7 @@ def validate():
 def recognize():
     readConfig(CONFIG_FILE)
 
-    for i in range(0, CAMERA_QUANTITY + 1):
+    for i in range(CAMERA_OFFSET, CAMERA_OFFSET + CAMERA_QUANTITY + 1):
         cameras.append(cv2.VideoCapture(i))
 
     for cam in cameras:
@@ -220,7 +222,7 @@ This is main code for executing this library directly
 def main():
     readConfig(CONFIG_FILE)
 
-    for i in range(0, CAMERA_QUANTITY + 1):
+    for i in range(CAMERA_OFFSET, CAMERA_OFFSET + CAMERA_QUANTITY + 1):
         cameras.append(cv2.VideoCapture(i))
 
     for cam in cameras:
