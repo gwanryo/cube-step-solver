@@ -1,7 +1,4 @@
-{
-    "LED_COUNT": 24,
-    "LED_BRIGHTNESS": 32,
-    
+{   
     "CAMERA_OFFSET": 0,
     "CAMERA_QUANTITY": 2,
     "CAMERA_DELAY": 2,
