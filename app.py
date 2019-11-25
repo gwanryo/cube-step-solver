@@ -1,10 +1,13 @@
 from flask import Flask, render_template
-from .lib.cube-recognizer import cube-recognizer
+import importlib
+recognizer = importlib.import_module('lib.cube-recognizer.cube-recognizer')
+
+
 app = Flask(__name__)
 
 @app.route('/')
 def main():
-    return 
+    return "Hello world!"
 
 
 if __name__ == '__main__':
