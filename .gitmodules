@@ -1,0 +1,6 @@
+[submodule "lib/cube-recognizer"]
+	path = lib/cube-recognizer
+	url = https://github.com/gwanryo/cube-recognizer
+[submodule "templates/cube-simulator"]
+	path = templates/cube-simulator
+	url = https://github.com/gwanryo/cube-simulator
