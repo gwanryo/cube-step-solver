@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template
 import importlib
-recognizer = importlib.import_module('lib.cube-recognizer.cube-recognizer')
+recognizer = importlib.import_module('lib.cube-recognizer.cube_recognizer')
 
 root = Blueprint('root', __name__)
 
