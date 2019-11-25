@@ -1,6 +1,6 @@
 from flask import Blueprint, request, url_for
 import importlib
-recognizer = importlib.import_module('lib.cube-recognizer.cube-recognizer')
+recognizer = importlib.import_module('lib.cube-recognizer.cube_recognizer')
 
 cube = Blueprint('cube', __name__)
 
