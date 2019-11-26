@@ -5,17 +5,32 @@ light = importlib.import_module('lib.cube-recognizer.cube_light')
 
 cube = Blueprint('cube', __name__)
 
-@cube.route('/')
+@cube.route('/', methods = ['POST'])
 def cubes():
-    cubeInfo = recognizer.recognize(5)
-    return cubeInfo
+    tryCount = 5
+
+    try:
+        data = request.get_json(silent=True)
+        tryCount = int(data['count'])
+        lightBright = int(data['light'])
+    except:
+        pass
+
+    try:
+        cubeInfo = recognizer.recognize(tryCount, lightBright)
+        return cubeInfo
+    except:
+        return {"success": 0, "cube": "{}"}
 
 @cube.route('/light', methods = ['POST'])
-def light():
+def lights():
     try:
         data = request.get_json(silent=True)
         lightBright = int(data['light'])
-        light.setBrightness(lightBright)
-        return {"success": 1, "brightness": lightBright}
     except:
+        return {"success": 0, "brightness": lightBright}
+
+    if light.setBrightness(lightBright):
+        return {"success": 1, "brightness": lightBright}
+    else:
         return {"success": 0, "brightness": lightBright}

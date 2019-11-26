@@ -6,12 +6,6 @@ root = Blueprint('root', __name__)
 
 @root.route("/")
 def roots():
-    try:
-        cubeInfo = recognizer.recognize()
-    except:
-        cubeInfo = {}
-    
     return render_template(
-        "cube-simulator/index.html",
-        cube = cubeInfo
+        "cube-simulator/index.html"
     )
