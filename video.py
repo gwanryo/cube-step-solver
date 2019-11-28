@@ -9,8 +9,8 @@ VIDEO_URL = [
 ]
 
 @video.route('/<id>')
-def videos(order):
+def videos(id):
     if order < len(VIDEO_URL):
-        return get(f'{VIDEO_URL[order]}').content
+        return get(f'{VIDEO_URL[id]}').content
     else:
         abort(404)
