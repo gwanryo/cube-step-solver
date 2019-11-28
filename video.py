@@ -12,5 +12,5 @@ VIDEO_URL = [
 def videos(order):
     if order < len(VIDEO_URL):
         return get(f'{VIDEO_URL[order]}').content
-    else
+    else:
         abort(404)
