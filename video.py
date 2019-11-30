@@ -8,7 +8,7 @@ VIDEO_URL = [
     'http://localhost:8081/?action=stream'
 ]
 
-@video.route('/<id>')
+@video.route('/<int:id>')
 def videos(id):
     if id < len(VIDEO_URL):
         return get(f'{VIDEO_URL[id]}').content
