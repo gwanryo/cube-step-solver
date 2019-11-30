@@ -1,7 +1,7 @@
 from flask import Blueprint, request, url_for
 import importlib
 recognizer = importlib.import_module('lib.cube-recognizer.cube_recognizer')
-light = importlib.import_module('lib.cube-recognizer.cube_light.cube_light')
+light = importlib.import_module('lib.cube-recognizer.cube_light')
 
 cube = Blueprint('cube', __name__)
 
