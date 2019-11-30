@@ -1,6 +1,8 @@
-{   
-    "CAMERA_OFFSET": 0,
-    "CAMERA_QUANTITY": 2,
+{
+    "CAMERA_URL": [
+        "http://localhost:8080/?action=stream",
+        "http://localhost:8081/?action=stream"
+    ],
     "CAMERA_DELAY": 2,
     "CAMERA_TIMES": 5,
     "CAMERA_WIDTH": 320,
