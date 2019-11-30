@@ -16,11 +16,8 @@ def cubes():
     except:
         pass
 
-    try:
-        cubeInfo = recognizer.recognize(tryCount, lightBright)
-        return cubeInfo
-    except:
-        return {"success": 0, "cube": "{}"}
+    cubeInfo = recognizer.recognize(tryCount, lightBright)
+    return cubeInfo
 
 @cube.route('/light', methods = ['POST'])
 def lights():
