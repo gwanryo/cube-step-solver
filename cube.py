@@ -8,6 +8,7 @@ cube = Blueprint('cube', __name__)
 @cube.route('', methods = ['POST'])
 def cubes():
     tryCount = 5
+    lightBright = 32
 
     try:
         data = request.get_json(silent=True)
