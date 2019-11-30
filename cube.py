@@ -5,7 +5,7 @@ light = importlib.import_module('lib.cube-recognizer.cube_light')
 
 cube = Blueprint('cube', __name__)
 
-@cube.route('', methods = ['POST'])
+@cube.route('/', methods = ['POST'])
 def cubes():
     tryCount = 5
     lightBright = 32
