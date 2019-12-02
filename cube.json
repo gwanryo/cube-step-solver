@@ -14,7 +14,7 @@
     "COLOR_AVERAGE_OFFSET": 3,
     "COLOR_DISTANCE_OFFSET": 50,
     "COLOR_CHROMATIC": {
-        "C": ["Y", "G", "B", "RO"],
+        "C": ["Y", "G", "B"],
         "H": [13, 45, 92, 150],
         "S": 70,
         "V": 0
