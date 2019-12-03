@@ -8,6 +8,7 @@
     "CAMERA_HEIGHT": 240,
 
     "RENDER_BASE_X": -1920,
+    "RENDER_BASE_X": 0,
     "RENDER_BASE_Y": 0,
     "RENDER_TITLEBAR_HEIGHT": 33,
 
