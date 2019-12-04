@@ -4,7 +4,7 @@
         "http://localhost:8081/?action=stream"
     ],
     "CAMERA_DELAY": 0.5,
-    "CAMEAR_OFFSET": 1,
+    "CAMERA_OFFSET": 1,
     "CAMERA_WIDTH": 320,
     "CAMERA_HEIGHT": 240,
 
@@ -16,8 +16,8 @@
     "COLOR_DISTANCE_OFFSET": 70,
     "COLOR_CHROMATIC": {
         "C": ["Y", "G", "B"],
-        "H": [23, 50, 92, 140],
-        "S": 80,
+        "H": [14, 50, 92, 140],
+        "S": 110,
         "V": 0
     },
 
